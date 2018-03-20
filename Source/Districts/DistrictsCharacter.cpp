@@ -10,6 +10,7 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
@@ -18,6 +19,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 // ADistrictsCharacter
 
 ADistrictsCharacter::ADistrictsCharacter()
+	:m_bToggleCrouch(false)
+	,m_bIsCrouching(false)
+	,m_sprintMultiplicator(1.5f)
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
@@ -80,6 +84,8 @@ ADistrictsCharacter::ADistrictsCharacter()
 	VR_MuzzleLocation->SetRelativeLocation(FVector(0.000004, 53.999992, 10.000000));
 	VR_MuzzleLocation->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));		// Counteract the rotation of the VR gun model.
 
+
+	m_baseWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	// Uncomment the following line to turn motion controllers on by default:
 	//bUsingMotionControllers = true;
 }
@@ -105,6 +111,7 @@ void ADistrictsCharacter::BeginPlay()
 	}
 }
 
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -117,8 +124,8 @@ void ADistrictsCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	// Bind fire event
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ADistrictsCharacter::OnFire);
+	// Bind attack event
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ADistrictsCharacter::OnAttack);
 
 	// Enable touchscreen input
 	EnableTouchscreenMovement(PlayerInputComponent);
@@ -136,6 +143,43 @@ void ADistrictsCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("TurnRate", this, &ADistrictsCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &ADistrictsCharacter::LookUpAtRate);
+	if (m_bToggleSprint)
+		ToggleSprintSetup(PlayerInputComponent);
+	else
+		NormalSprintSetup(PlayerInputComponent);
+
+	if(m_bToggleCrouch)
+		ToggleCrouchSetup(PlayerInputComponent);
+	else
+		NormalCrouchSetup(PlayerInputComponent);
+}
+
+
+void ADistrictsCharacter::ToggleCrouchSetup(UInputComponent * inputComponent)
+{
+	inputComponent->BindAction("ToggleCrouch", IE_Pressed, this, &ADistrictsCharacter::ToggleCrouch); 
+}
+
+void ADistrictsCharacter::NormalCrouchSetup(UInputComponent * inputComponent)
+{
+	inputComponent->BindAction("Crouch", IE_Pressed, this, &ADistrictsCharacter::Crouch); 
+	inputComponent->BindAction("Crouch", IE_Released, this, &ADistrictsCharacter::UnCrouch);
+}
+void ADistrictsCharacter::ToggleSprintSetup(UInputComponent * inputComponent)
+{
+	inputComponent->BindAction("ToggleSprint", IE_Pressed, this, &ADistrictsCharacter::ToggleSprint);
+}
+
+void ADistrictsCharacter::NormalSprintSetup(UInputComponent * inputComponent)
+{
+	inputComponent->BindAction("Sprint", IE_Pressed, this, &ADistrictsCharacter::Sprint);
+	inputComponent->BindAction("Sprint", IE_Released, this, &ADistrictsCharacter::UnSprint);
+}
+
+
+void ADistrictsCharacter::OnAttack()
+{
+
 }
 
 void ADistrictsCharacter::OnFire()
@@ -259,7 +303,7 @@ void ADistrictsCharacter::MoveForward(float Value)
 	if (Value != 0.0f)
 	{
 		// add movement in that direction
-		AddMovementInput(GetActorForwardVector(), Value);
+			AddMovementInput(GetActorForwardVector(), Value);
 	}
 }
 
@@ -268,7 +312,8 @@ void ADistrictsCharacter::MoveRight(float Value)
 	if (Value != 0.0f)
 	{
 		// add movement in that direction
-		AddMovementInput(GetActorRightVector(), Value);
+			AddMovementInput(GetActorRightVector(), Value);
+
 	}
 }
 
@@ -282,6 +327,53 @@ void ADistrictsCharacter::LookUpAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void ADistrictsCharacter::ToggleCrouch()
+{
+	if (!m_bIsCrouching)
+	{
+		Crouch();
+		m_bIsCrouching = true;
+	}
+	else if (m_bIsCrouching)
+	{
+		UnCrouch();
+		m_bIsCrouching = false;
+	}
+
+	
+}
+
+void ADistrictsCharacter::Crouch()
+{
+	
+	ACharacter::Crouch();
+}
+
+void ADistrictsCharacter::UnCrouch()
+{
+	ACharacter::UnCrouch();
+}
+
+void ADistrictsCharacter::ToggleSprint()
+{
+	m_bIsSprinting = !m_bIsSprinting;
+	if (m_bIsSprinting)
+		GetCharacterMovement()->MaxWalkSpeed = m_baseWalkSpeed * m_sprintMultiplicator;
+	else
+		GetCharacterMovement()->MaxWalkSpeed = m_baseWalkSpeed;
+}
+
+void ADistrictsCharacter::Sprint()
+{
+	
+	GetCharacterMovement()->MaxWalkSpeed = m_baseWalkSpeed * m_sprintMultiplicator;
+}
+
+void ADistrictsCharacter::UnSprint()
+{
+	GetCharacterMovement()->MaxWalkSpeed = m_baseWalkSpeed;
 }
 
 bool ADistrictsCharacter::EnableTouchscreenMovement(class UInputComponent* PlayerInputComponent)

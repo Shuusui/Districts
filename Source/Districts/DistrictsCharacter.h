@@ -50,7 +50,6 @@ public:
 
 protected:
 	virtual void BeginPlay();
-
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -80,8 +79,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	uint32 bUsingMotionControllers : 1;
 
+	/** Switch toggle crouch or hold the button to crouch. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+		bool m_bToggleCrouch;
+	/** true if the character is already crouching, otherwise false. */
+	UPROPERTY()
+		bool m_bIsCrouching;
+	/** Switch toggle sprint or hold the button to sprint. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+		bool m_bToggleSprint;
+	UPROPERTY()
+		bool m_bIsSprinting;
+	UPROPERTY()
+		float m_baseWalkSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+		float m_sprintMultiplicator;
 protected:
 	
+	void OnAttack(); 
 	/** Fires a projectile. */
 	void OnFire();
 
@@ -106,6 +121,30 @@ protected:
 	 */
 	void LookUpAtRate(float Rate);
 
+	/**
+	* Toggles crouching 
+	*/
+	void ToggleCrouch(); 
+	/**
+	* Player crouches without toggle
+	*/
+	void Crouch(); 
+	/**
+	* Player uncrouches 
+	*/
+	void UnCrouch();
+	/**
+	* Toggles sprinting
+	*/
+	void ToggleSprint(); 
+	/**
+	* Player Sprints
+	*/
+	void Sprint();
+	/**
+	* Player unsprints
+	*/
+	void UnSprint();
 	struct TouchData
 	{
 		TouchData() { bIsPressed = false;Location=FVector::ZeroVector;}
@@ -122,6 +161,25 @@ protected:
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+	/**
+	* Set the inputs for toggle the crouch
+	* @param inputComponent The component which gets the input informations
+	*/
+	void ToggleCrouchSetup(UInputComponent* inputComponent);
+	/**
+	* Sets the normal inputs for not toggle the crouch
+	* @param inputComponent The component which gets the input informations
+	*/
+	void NormalCrouchSetup(UInputComponent* inputComponent);
+	/** Set the inputs for toggle sprint
+	* @param inputComponent The Component which gets the input informations
+	*/
+	void ToggleSprintSetup(UInputComponent* inputComponent); 
+	/**
+	* Sets the normal inputs for not toggle sprint
+	* @param inputComponent The component which gets the input information
+	*/
+	void NormalSprintSetup(UInputComponent* inputComponent);
 	// End of APawn interface
 
 	/* 
